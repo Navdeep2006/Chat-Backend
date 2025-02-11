@@ -1,11 +1,17 @@
-const express = require ('express');
-const dotenv = require ('dotenv');
-const cookieParser = require ('cookie-parser');
-const cors = require ('cors');
+import express from "express";
+import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
 
+import {connectDB} from './libs/db.js';
+
+import authRoutes from "./routes/auth.routes.js";
+
+
+dotenv.config();
 
 const app = express();
-dotenv.config();
+
 
 const PORT = process.env.PORT;
 
@@ -16,7 +22,10 @@ app.use(cors({
     credentials:true,
 }));
 
+app.use("/api/auth",authRoutes);
+
 
 app.listen(PORT,()=>{
-    console.log("server is running on PORT:"+PORT)
+    console.log("server is running on PORT:"+PORT);
+    connectDB();
 })

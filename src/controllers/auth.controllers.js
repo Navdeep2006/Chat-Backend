@@ -1,5 +1,6 @@
 import User from '../models/user.models.js';
 import bcrypt from 'bcryptjs';
+import { verifyEmailGenerator } from '../libs/nodemailer.js'
 
 export const signup = async (req,res)=>{
     const {username,email,password} = req.body;
@@ -14,16 +15,22 @@ export const signup = async (req,res)=>{
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password,salt);
 
+        const verificationCode = Math.floor(1000 + Math.random() * 9000);
+        const verificationExpire = Date.now()+10*60*1000;
+
         const newUser = new User({
             name: username,
             username,
             email,
-            password: hashedPassword
+            password: hashedPassword,
+            verificationCode,
+            verificationExpire,
         });
-
 
         if(newUser){
             await newUser.save();
+
+            verifyEmailGenerator(newUser.verificationCode,newUser.email);
 
             res.status(201).json({
                 _id:newUser._id,

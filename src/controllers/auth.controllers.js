@@ -1,6 +1,7 @@
 import User from '../models/user.models.js';
 import bcrypt from 'bcryptjs';
 import { verifyEmailGenerator } from '../libs/nodemailer.js'
+import { generateToken } from '../libs/jwt.js';
 
 export const signup = async (req,res)=>{
     const {username,email,password} = req.body;
@@ -29,6 +30,8 @@ export const signup = async (req,res)=>{
 
         if(newUser){
             await newUser.save();
+
+            generateToken(newUser._id,res);
 
             verifyEmailGenerator(newUser.verificationCode,newUser.email);
 

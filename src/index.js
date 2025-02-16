@@ -24,6 +24,10 @@ app.use(cors({
 
 app.use("/api/auth",authRoutes);
 
+app.use((err,req,res,next) => {
+    console.log("Unexpected error: ", err.message);
+    res.status(500).json({message: "Internal server Error"});
+})
 
 app.listen(PORT,()=>{
     console.log("server is running on PORT:"+PORT);

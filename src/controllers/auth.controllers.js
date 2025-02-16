@@ -42,6 +42,7 @@ export const signup = async (req,res)=>{
                 email: newUser.email,
                 pic: newUser.pic,
             });
+
         }else{
             res.status(400).json({message: "Invalid user data"});
         }
@@ -51,7 +52,42 @@ export const signup = async (req,res)=>{
         res.status(500).json({message: "Internal Server Error"});
     }
 };
-export const login =()=>{};
-export const logout =()=>{};
+
+export const login = async (req,res)=>{
+    const {email,password} = req.body;
+    try {
+        const user = await User.findOne({email});
+
+        if(!user) return res.status(400).json({message:"Invalid Credentials"});
+
+        const isPasswordCorrect = bcrypt.compare(password,user.password);
+
+        if(!isPasswordCorrect) return res.status(400).json({message:"Invalid Credentials"});
+
+        generateToken(user._id,res);
+
+        res.status(200).json({
+            _id:user._id,
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            pic: user.pic,
+        });
+
+    } catch (error) {
+        console.log("Error is login controller",error.message);
+        res.status(500).json({message: "Internal Server Error"});
+    }
+};
+
+export const logout = async(req,res)=>{
+    try {
+        res.cookie("jwt","",{maxAge:0})
+        res.status(200).json({message: "Logged out Successfully"})
+    } catch (error) {
+        console.log("error in the logout controller",error.message);
+        res.status(500).json({message:"Internal Server Error"});
+    }
+};
 export const verifyEmail =()=>{};
 export const forgetPassword =()=>{};

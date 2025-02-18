@@ -89,5 +89,47 @@ export const logout = async(req,res)=>{
         res.status(500).json({message:"Internal Server Error"});
     }
 };
-export const verifyEmail =()=>{};
+
+export const sendVerifyEmail = async(req,res) => {
+    const user = req.user;
+    try {
+        const verificationCode = Math.floor(1000 + Math.random() * 9000);
+        const verificationExpire = Date.now()+10*60*1000;
+
+        const updatedUser = User.findByIdAndUpdate(user._id,{verificationCode,verificationExpire},{new:true});
+        if(!updatedUser) throw new Error("Database update failed");
+
+        verifyEmailGenerator(updatedUser.verificationCode,updatedUser.email);
+
+        res.status(200).json({message: "Successful"});
+
+    } catch (error) {
+        console.log("Error in sendVerifyEmail Controller",error.message);
+        res.status(500).json({message:"Internal Server Error"});
+    }
+}
+
+export const verifyEmail = async(req,res)=>{
+    const {code} = req.body;
+    const user = req.user;
+    try {
+    const presentTime = Date.now();
+
+    if(user.verificationExpire > presentTime) return res.status(400).json({message: "Code has expired"});
+
+    if(user.verificationCode!=code) return res.status(400).json({message: "Incorrect Code"});
+
+    const updatedUser = await User.findByIdAndUpdate(user._id,{isVerified:true},{new:true});
+    
+    if(!updatedUser) throw new Error("Database update failed");
+
+    res.status(200).json({message: "Successfully updated"});
+
+
+    } catch (error) {
+        console.log("Error in verifyEmail Controller",error.message);
+        res.status(500).json({message:"Internal Server Error"});
+    }
+};
+
 export const forgetPassword =()=>{};

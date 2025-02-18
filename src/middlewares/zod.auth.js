@@ -32,3 +32,18 @@ export const loginSchemaChecker = (req,res,next) =>{
         res.status(400).json({message: "Invalid user data"});
     }
 }
+
+const verifyEmailSchema = z.object({
+    code: z.string().trim().length(4)
+})
+
+export const verifyEmailChecker = (req,res,next) =>{
+    let data = verifyEmailSchema.safeParse(req.body);
+    if(data.success){
+        req.body = data.data;
+        next();
+    }
+    else{
+        res.status(400).json({message: "Invalid code data"});
+    }
+}

@@ -1,6 +1,6 @@
 import User from '../models/user.models.js';
 import bcrypt from 'bcryptjs';
-import { verifyEmailGenerator } from '../libs/nodemailer.js'
+import { resetPasswordEmailGenerator, verifyEmailGenerator } from '../libs/nodemailer.js'
 import { generateToken } from '../libs/jwt.js';
 
 export const signup = async (req,res)=>{
@@ -60,7 +60,7 @@ export const login = async (req,res)=>{
 
         if(!user) return res.status(400).json({message:"Invalid Credentials"});
 
-        const isPasswordCorrect = bcrypt.compare(password,user.password);
+        const isPasswordCorrect = await bcrypt.compare(password,user.password);
 
         if(!isPasswordCorrect) return res.status(400).json({message:"Invalid Credentials"});
 
@@ -96,9 +96,9 @@ export const sendVerifyEmail = async(req,res) => {
         const verificationCode = Math.floor(1000 + Math.random() * 9000);
         const verificationExpire = Date.now()+10*60*1000;
 
-        const updatedUser = User.findByIdAndUpdate(user._id,{verificationCode,verificationExpire},{new:true});
+        const updatedUser = await User.findByIdAndUpdate(user._id,{verificationCode,verificationExpire},{new:true});
         if(!updatedUser) throw new Error("Database update failed");
-
+       
         verifyEmailGenerator(updatedUser.verificationCode,updatedUser.email);
 
         res.status(200).json({message: "Successful"});
@@ -107,7 +107,7 @@ export const sendVerifyEmail = async(req,res) => {
         console.log("Error in sendVerifyEmail Controller",error.message);
         res.status(500).json({message:"Internal Server Error"});
     }
-}
+};
 
 export const verifyEmail = async(req,res)=>{
     const {code} = req.body;
@@ -115,7 +115,7 @@ export const verifyEmail = async(req,res)=>{
     try {
     const presentTime = Date.now();
 
-    if(user.verificationExpire > presentTime) return res.status(400).json({message: "Code has expired"});
+    if(!(user.verificationExpire > presentTime)) return res.status(400).json({message: "Code has expired"});
 
     if(user.verificationCode!=code) return res.status(400).json({message: "Incorrect Code"});
 
@@ -132,4 +132,58 @@ export const verifyEmail = async(req,res)=>{
     }
 };
 
-export const forgetPassword =()=>{};
+export const sendForgetPasswordEmail = async(req,res)=>{
+    const {email} = req.body;
+    try {
+        const user =await User.findOne({email});
+
+        if(!user) res.status(400).json({message: "No User with Email Exist"});
+
+        const resetCode = Math.floor(1000 + Math.random() * 9000);
+        const resetExpire =  Date.now()+10*60*1000;
+
+        const updatedUser =await User.findByIdAndUpdate(user._id,{resetCode,resetExpire},{new:true});
+
+        if(!updatedUser) throw new Error("Database update failed");
+
+        resetPasswordEmailGenerator(updatedUser.resetCode,updatedUser.email);
+
+        res.status(200).json({message: "Successful"});
+
+    } catch (error) {
+        console.log("Error sendForgetPasswordEmail Controller",error.message);
+        res.status(500).json({message:"Internal Server Error"});
+    }
+
+};
+
+export const forgetPassword = async(req,res)=>{
+    const {email,code,password} = req.body;
+    try {
+
+        const user = await User.findOne({email});
+
+        if(!user) res.status(400).json({message: "No User with Email Exist"});
+
+        const presentTime = Date.now();
+
+
+        if(!(user.resetExpire > presentTime)) return res.status(400).json({message: "Code has expired"});
+
+        if(user.resetCode!=code) return res.status(400).json({message: "Incorrect Code"});
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password,salt);
+
+        
+        const updatedUser = await User.findByIdAndUpdate(user._id,{password:hashedPassword},{new:true});
+    
+        if(!updatedUser) throw new Error("Database update failed");
+
+        res.status(200).json({message: "Successfully updated"});
+        
+    } catch (error) {
+        console.log("Error in forgetPassword Controller",error.message);
+        res.status(500).json({message:"Internal Server Error"});
+    }
+};
